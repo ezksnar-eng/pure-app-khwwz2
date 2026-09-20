@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>مانجا بيور</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0e141c;
+  --bg2:#141c27;
+  --card:#1a2331;
+  --card2:#1f2a3a;
+  --border:rgba(255,255,255,.07);
+  --text:#eef2f7;
+  --dim:#93a1b3;
+  --faint:#5d6b7d;
+  --accent:#3d97e8;
+  --accent-soft:rgba(61,151,232,.14);
+  --star:#f4c430;
+  --danger:#e0555a;
+  --green:#3fbf7f;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Tajawal',sans-serif;
+  font-size:15px;
+  overflow-x:hidden;
+}
+img{max-width:100%;display:block}
+button,input,textarea,select{font-family:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#2a3646;border-radius:10px}
+
+#app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:64px}
+
+/* ===== شريط علوي ===== */
+.topbar{
+  position:sticky;top:0;z-index:30;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;background:rgba(14,20,28,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);
+}
+.topbar h1{font-size:19px;font-weight:800;letter-spacing:.2px}
+.icon-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--text)}
+.icon-btn:active{background:rgba(255,255,255,.08)}
+.topbar-left,.topbar-right{display:flex;align-items:center;gap:2px}
+.icon-btn svg{width:21px;height:21px}
+
+/* ===== الدرج الجانبي ===== */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.show{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;height:100%;width:80%;max-width:320px;
+  background:#111925;z-index:51;transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  overflow-y:auto;border-left:1px solid var(--border);
+}
+.drawer.show{transform:translateX(0)}
+.drawer-item{
+  display:flex;align-items:center;gap:14px;padding:13px 18px;font-size:15px;color:var(--text);
+}
+.drawer-item svg{width:19px;height:19px;flex:none;color:var(--dim)}
+.drawer-item.active{background:var(--accent-soft);color:var(--accent)}
+.drawer-item.active svg{color:var(--accent)}
+.drawer-item:active{background:rgba(255,255,255,.05)}
+.drawer-sep{height:1px;background:var(--border);margin:6px 0}
+.drawer-upload{color:var(--star)}
+.drawer-upload svg{color:var(--star)!important}
+
+/* ===== الشبكة الرئيسية ===== */
+.searchbar{padding:10px 16px 4px}
+.searchbar input{
+  width:100%;padding:10px 14px;background:var(--card);border:1px solid var(--border);
+  border-radius:999px;color:var(--text);font-size:14px;
+}
+.searchbar input::placeholder{color:var(--faint)}
+
+.section-title{padding:14px 16px 8px;font-size:15px;font-weight:700;color:var(--dim)}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:8px 12px}
+.card{background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+.card-cover{position:relative;aspect-ratio:2/3;background:linear-gradient(150deg,#24344a,#141c27);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.card-cover img{width:100%;height:100%;object-fit:cover}
+.cover-placeholder{font-size:12px;color:var(--dim);text-align:center;padding:6px;font-weight:700;line-height:1.5}
+.badge{position:absolute;bottom:0;right:0;left:0;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent);color:#fff;font-size:11px;font-weight:700;padding:12px 6px 4px;text-align:center}
+.type-badge{position:absolute;top:5px;left:5px;background:rgba(0,0,0,.55);color:var(--star);font-size:9px;font-weight:800;padding:2px 6px;border-radius:5px}
+.card-info{padding:7px 8px 9px}
+.card-title{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{display:flex;align-items:center;justify-content:space-between;margin-top:3px;font-size:11px;color:var(--dim)}
+.rate{display:flex;align-items:center;gap:2px;color:var(--star)}
+.rate svg{width:11px;height:11px}
+
+.empty{padding:60px 24px;text-align:center;color:var(--faint)}
+.empty svg{width:46px;height:46px;margin:0 auto 12px;opacity:.5}
+.empty b{display:block;color:var(--dim);margin-bottom:4px;font-size:15px}
+
+/* ===== صفحة التفاصيل ===== */
+.detail-topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(14,20,28,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.detail-topbar h2{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.tabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--border);position:sticky;top:57px;z-index:19;background:var(--bg)}
+.tab{flex:none;padding:12px 16px;font-size:13.5px;font-weight:700;color:var(--faint);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.active{color:var(--text);border-color:var(--text)}
+
+.hero{display:flex;gap:14px;padding:16px}
+.hero-cover{width:110px;aspect-ratio:2/3;border-radius:8px;overflow:hidden;flex:none;background:linear-gradient(150deg,#24344a,#141c27);display:flex;align-items:center;justify-content:center}
+.hero-cover img{width:100%;height:100%;object-fit:cover}
+.hero-info h2{font-size:18px;font-weight:800;line-height:1.35}
+.hero-info .status-line{color:var(--dim);font-size:13px;margin-top:6px}
+.hero-info .meta-line{color:var(--dim);font-size:13px;margin-top:2px}
+
+.rating-row{display:flex;align-items:center;justify-content:space-around;padding:14px 10px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.rating-col{text-align:center}
+.rating-col .big{font-size:21px;font-weight:800}
+.rating-col .big.star{color:var(--star)}
+.rating-col .lbl{font-size:10.5px;color:var(--faint);margin-top:2px}
+.rating-col svg{width:24px;height:24px}
+.rating-col svg.filled{color:var(--accent)}
+.rating-col svg.outline{color:var(--dim)}
+
+.desc{padding:16px;line-height:1.9;font-size:14px;color:#d4dbe4;background:var(--card2);margin:12px 14px;border-radius:12px}
+.tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+.tag{background:#26324356;padding:6px 16px;border-radius:20px;font-size:12.5px;color:var(--dim)}
+
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px}
+.meta-cell{text-align:center}
+.meta-cell .k{font-size:12px;color:var(--faint);margin-bottom:4px}
+.meta-cell .v{font-size:13.5px;font-weight:700}
+
+/* ===== قائمة الفصول ===== */
+.chapter-row{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border)}
+.chapter-row .ch-name{font-size:15px}
+.chapter-row .ch-actions{display:flex;gap:18px;color:var(--faint)}
+.chapter-row .ch-actions svg{width:19px;height:19px}
+.chapter-row .ch-actions svg.read{color:var(--accent)}
+.chapter-row:active{background:rgba(255,255,255,.03)}
+
+/* ===== الاحصائيات ===== */
+.stat-box{margin:14px;padding:14px;background:var(--card2);border-radius:14px}
+.stat-box h3{font-size:14px;color:var(--dim);margin-bottom:10px;font-weight:700}
+.stat-note{font-size:11px;color:var(--faint);margin-top:8px;text-align:center}
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.legend{flex:1;display:flex;flex-direction:column;gap:8px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim)}
+.legend-dot{width:10px;height:10px;border-radius:3px;flex:none}
+
+/* ===== أزرار عامة ===== */
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border-radius:10px;font-size:14px;font-weight:700}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-block{width:100%}
+.fab{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);max-width:480px;width:calc(100% - 32px);z-index:25}
+
+/* ===== شاشة الرفع ===== */
+.upload-hero{padding:18px 16px 6px}
+.upload-hero p{color:var(--dim);font-size:13px;margin-top:4px;line-height:1.7}
+.type-switch{display:flex;gap:8px;padding:10px 16px}
+.type-switch button{flex:1;padding:9px;border-radius:10px;background:var(--card);border:1px solid var(--border);font-size:13px;font-weight:700;color:var(--dim)}
+.type-switch button.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+
+.upload-work{margin:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.upload-work-head{display:flex;gap:12px;padding:12px}
+.upload-work-head img,.upload-work-head .ph{width:60px;height:84px;border-radius:8px;object-fit:cover;flex:none;background:#24344a;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--dim);text-align:center}
+.upload-work-body{flex:1;min-width:0}
+.upload-work-body h4{font-size:14.5px;font-weight:700}
+.upload-work-body .sub{font-size:11.5px;color:var(--faint);margin-top:3px}
+.upload-work-actions{display:flex;gap:8px;padding:0 12px 12px}
+.upload-work-actions button{flex:1;padding:8px;font-size:12.5px;border-radius:8px}
+.chapters-inline{border-top:1px solid var(--border)}
+.chapters-inline .ci-row{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;font-size:12.5px;color:var(--dim);border-top:1px solid var(--border)}
+.chapters-inline .ci-row button{color:var(--danger);font-size:11px}
+
+/* ===== نموذج / مودال ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:auto}
+.modal{background:#141c27;width:100%;max-width:480px;margin:0 auto;border-radius:18px 18px 0 0;padding:18px 18px 24px;max-height:88vh;overflow-y:auto;transform:translateY(20px);transition:transform .25s}
+.modal-overlay.show .modal{transform:translateY(0)}
+.modal h3{font-size:16.5px;font-weight:800;margin-bottom:14px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12.5px;color:var(--dim);margin-bottom:5px}
+.field input[type=text],.field textarea,.field select{
+  width:100%;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:9px;font-size:14px;color:var(--text);
+}
+.field textarea{resize:vertical;min-height:70px}
+.radio-row{display:flex;gap:8px}
+.radio-row label{flex:1;text-align:center;padding:9px;border:1px solid var(--border);border-radius:9px;font-size:13px;color:var(--dim)}
+.radio-row input{display:none}
+.radio-row input:checked + span{color:var(--accent)}
+.radio-row label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.filepick{border:1.5px dashed var(--border);border-radius:10px;padding:18px;text-align:center;color:var(--faint);font-size:12.5px}
+.filepick.small{padding:10px}
+.file-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.file-list span{background:var(--card);padding:4px 9px;border-radius:6px;font-size:11px;color:var(--dim)}
+.modal-actions{display:flex;gap:10px;margin-top:6px}
+.modal-actions .btn{flex:1}
+.toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:#20304a;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;z-index:70;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+
+/* ===== قارئ الفصل ===== */
+.reader-top{position:fixed;top:0;right:0;left:0;max-width:480px;margin:0 auto;z-index:40;background:rgba(10,14,20,.9);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)}
+.reader-pages{padding-top:56px}
+.reader-pages img{width:100%;display:block}
+.reader-bottom{position:fixed;bottom:0;right:0;left:0;max-width:480px;margin:0 auto;z-index:40;background:rgba(10,14,20,.92);display:flex;gap:10px;padding:10px 14px;border-top:1px solid var(--border)}
+.reader-bottom .btn{flex:1}
+
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer"></div>
+<div class="modal-overlay" id="modalOverlay"><div class="modal" id="modalBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   تطبيق مانجا بيور — ملف واحد ذاتي الاكتفاء
+   تخزين محلي عبر IndexedDB (الأعمال + الفصول + الصور Base64)
+   ============================================================ */
+
+/* ---------- أيقونات SVG بسيطة ---------- */
+const ICON = {
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+  flame:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3-2 4-2 7a4 4 0 008 0c1.5 2 2 4 2 6a8 8 0 11-16 0c0-4 2-6 4-9 1 1 1 2 2 2 .5-2-1-4 2-6z"/></svg>',
+  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1" fill="currentColor"/><circle cx="3.5" cy="12" r="1" fill="currentColor"/><circle cx="3.5" cy="18" r="1" fill="currentColor"/></svg>',
+  grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+  bars:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2.2 0 3.7 1.3 6 4 2.3-2.7 3.8-4 6-4 4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z"/></svg>',
+  heartFilled:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2 4 6 4c2.2 0 3.7 1.3 6 4 2.3-2.7 3.8-4 6-4 4 0 5.5 4 4 7.7C19.5 16.4 12 21 12 21z"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>',
+  download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><polyline points="7 12 12 17 17 12"/><line x1="4" y1="20" x2="20" y2="20"/></svg>',
+  puzzle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4h4v2.5a1.5 1.5 0 003 0V4h4v4h-2.5a1.5 1.5 0 000 3H21v4h-4v-2.5a1.5 1.5 0 00-3 0V17h-4v-4H7.5a1.5 1.5 0 000-3H10V4z"/></svg>',
+  calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 7 1-5 4.9 1.2 6.9-6.3-3.3-6.3 3.3 1.2-6.9-5-4.9 7-1z"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+  comment:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
+  upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V8"/><polyline points="7 13 12 8 17 13"/><line x1="4" y1="4" x2="20" y2="4"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>',
+  chevronDown:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+  image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>',
+};
+
+/* ---------- IndexedDB ---------- */
+let db;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open('pureMangaDB', 1);
+    r.onupgradeneeded = e=>{
+      const d = e.target.result;
+      if(!d.objectStoreNames.contains('works')) d.createObjectStore('works',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('chapters')) d.createObjectStore('chapters',{keyPath:'id'});
+    };
+    r.onsuccess = e=>{db=e.target.result; res(db)};
+    r.onerror = e=>rej(e);
+  });
+}
+function tx(store, mode='readonly'){ return db.transaction(store, mode).objectStore(store); }
+function dbGetAll(store){ return new Promise(res=>{ const r=tx(store).getAll(); r.onsuccess=()=>res(r.result||[]); }); }
+function dbGet(store,id){ return new Promise(res=>{ const r=tx(store).get(id); r.onsuccess=()=>res(r.result); }); }
+function dbPut(store,val){ return new Promise(res=>{ const r=tx(store,'readwrite').put(val); r.onsuccess=()=>res(val); }); }
+function dbDelete(store,id){ return new Promise(res=>{ const r=tx(store,'readwrite').delete(id); r.onsuccess=()=>res(); }); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ---------- بيانات مبدئية عند أول تشغيل ---------- */
+async function seedIfEmpty(){
+  const works = await dbGetAll('works');
+  if(works.length) return;
+  const demo = [
+    {id:uid(), title:'ظل التاج المفقود', titleEn:'Shadow of the Lost Crown', type:'مانهوا', status:'مستمر', genres:['أكشن','خيال','دراما'], desc:'بعد أن فقد عرشه في ليلة واحدة، يخوض الأمير كيان رحلة انتقام عبر ممالك مظلمة، حاملاً سراً قد يقلب موازين القوى في القارة بأكملها.', source:'ويب تون', publisher:'استوديو بيور', from:'2025', chapters:32},
+    {id:uid(), title:'أكاديمية السحرة الصامتين', titleEn:'Silent Mages Academy', type:'مانجا', status:'مكتمل', genres:['مدرسي','خيال','كوميديا'], desc:'في أكاديمية يُمنع فيها الكلام أثناء استخدام السحر، تكتشف الطالبة نور موهبة نادرة تجعلها محط أنظار الجميع.', source:'مانجا ويب', publisher:'دار نشر الفجر', from:'2023', chapters:87},
+    {id:uid(), title:'قلب من حديد', titleEn:'Heart of Iron', type:'مانهوا', status:'مستمر', genres:['أكشن','رياضة'], desc:'حارس مرمى سابق يعود للملاعب بعد إصابة كادت تنهي مسيرته، ليواجه فريقاً جديداً وحلماً قديماً لم يمت بعد.', source:'ويب تون', publisher:'استوديو بيور', from:'2024', chapters:19},
+  ];
+  for(const w of demo){
+    w.cover=null; w.listStatus=null; w.userRating=0; w.readChapterIds=[]; w.lastOpened=0;
+    w.dist = seededDist(w.id);
+    await dbPut('works', w);
+    const chN = w.chapters>12?12:w.chapters;
+    for(let i=1;i<=chN;i++){
+      await dbPut('chapters', {id:uid(), workId:w.id, number:i, title:'', pages:[], createdAt:Date.now()-i*1000});
+    }
+  }
+}
+function seededDist(id){
+  let seed=0; for(const c of id) seed+=c.charCodeAt(0);
+  const r=(n)=>{ seed=(seed*9301+49297)%233280; return Math.floor((seed/233280)*n); };
+  const d=[]; for(let i=0;i<10;i++) d.push(10+r(60));
+  d[8]+=40; d[9]+=180;
+  return d;
+}
+
+/* ---------- التوجيه (Router) ---------- */
+let route = {name:'home'};
+function nav(r){ route=r; render(); window.scrollTo(0,0); }
+
+/* ---------- أدوات مساعدة عامة ---------- */
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(window.__toastT);
+  window.__toastT=setTimeout(()=>t.classList.remove('show'),1800);
+}
+function fileToDataURL(file){
+  return new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(file); });
+}
+function esc(s){ return (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+/* ---------- الدرج الجانبي ---------- */
+const DRAWER_ITEMS = [
+  {name:'home', label:'أخر التحديثات', icon:ICON.flame},
+  {name:'list', label:'قائمة المانجا', icon:ICON.list},
+  {name:'genres', label:'الأنواع', icon:ICON.calendar},
+  '-',
+  {name:'ratingGlobal', label:'التقييم العالمي', icon:ICON.bars},
+  {name:'ratingArabic', label:'التقييم العربي', icon:ICON.bars},
+  '-',
+  {name:'myList', label:'قائمتي', icon:ICON.bars},
+  {name:'customList', label:'القائمة المخصصة', icon:ICON.bars},
+  {name:'favorites', label:'مفضلتي', icon:ICON.heart},
+  {name:'favChars', label:'شخصياتي المفضلة', icon:ICON.heart},
+  {name:'recent', label:'اخر القراءات', icon:ICON.clock},
+  {name:'downloads', label:'تحميلاتي', icon:ICON.download},
+  '-',
+  {name:'popularChars', label:'الشخصيات الاكثر شعبية', icon:ICON.bars},
+  {name:'recommend', label:'التوصيات', icon:ICON.puzzle},
+  {name:'schedule', label:'مواعيد نزول الفصول', icon:ICON.calendar},
+  '-',
+  {name:'upload', label:'مجلد رفع', icon:ICON.upload, special:true},
+];
+function renderDrawer(){
+  const el=document.getElementById('drawer');
+  el.innerHTML = DRAWER_ITEMS.map(it=>{
+    if(it==='-') return '<div class="drawer-sep"></div>';
+    const active = route.name===it.name ? 'active':'';
+    const special = it.special ? 'drawer-upload':'';
+    return `<div class="drawer-item ${active} ${special}" data-nav="${it.name}">${it.icon}<span>${it.label}</span></div>`;
+  }).join('');
+  el.querySelectorAll('[data-nav]').forEach(n=>{
+    n.onclick=()=>{ closeDrawer(); nav({name:n.dataset.nav}); };
+  });
+}
+function openDrawer(){ document.getElementById('drawer').classList.add('show'); document.getElementById('overlay').classList.add('show'); }
+function closeDrawer(){ document.getElementById('drawer').classList.remove('show'); document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').onclick=closeDrawer;
+
+/* ---------- شريط علوي عام للصفحات البسيطة ---------- */
+function topbar(title, opts={}){
+  return `<div class="topbar">
+    <div class="topbar-left">
+      <button class="icon-btn" onclick="openDrawer()">${ICON.menu}</button>
+      <h1>${esc(title)}</h1>
+    </div>
+    <div class="topbar-right">
+      ${opts.search? `<button class="icon-btn" onclick="nav({name:'search'})">${ICON.search}</button>`:''}
+      <button class="icon-btn" onclick="nav({name:'list'})">${ICON.grid}</button>
+      <button class="icon-btn" onclick="toast('مانجا بيور — نسخة محلية تجريبية')">${ICON.info}</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- بطاقة عمل ---------- */
+function workCard(w){
+  const last = w.status==='مكتمل' ? `${w.chapters||0} : الفصل الأخير` : `${w.chapters||0} : الفصل`;
+  const cover = w.cover ? `<img src="${w.cover}">` : `<div class="cover-placeholder">${esc(w.title)}</div>`;
+  return `<div class="card" data-open="${w.id}">
+    <div class="card-cover">${cover}
+      <div class="type-badge">${esc(w.type||'مانجا')}</div>
+      <div class="badge">${last}</div>
+    </div>
+    <div class="card-info">
+      <div class="card-title">${esc(w.title)}</div>
+      <div class="card-meta">
+        <span>${esc(w.status||'')}</span>
+        <span class="rate">${ICON.star}${(w.avgRating||8.0).toFixed?((w.avgRating||8.0)).toFixed(1):w.avgRating}</span>
+      </div>
+    </div>
+  </div>`;
+}
+function bindCards(root){
+  root.querySelectorAll('[data-open]').forEach(c=>{
+    c.onclick=()=>nav({name:'details', id:c.dataset.open, tab:'details'});
+  });
+}
+
+/* ---------- الصفحة الرئيسية ---------- */
+async function pageHome(){
+  const works = await dbGetAll('works');
+  works.sort((a,b)=> (b.updatedAt||0)-(a.updatedAt||0));
+  const html = `
+    ${topbar('أخر التحديثات',{search:true})}
+    ${works.length? `<div class="grid">${works.map(workCard).join('')}</div>` : emptyState('لا توجد أعمال بعد','ابدأ برفع أول عمل من "مجلد رفع" في القائمة الجانبية')}
+  `;
+  setView(html);
+  bindCards(document);
+}
+
+function emptyState(title, sub){
+  return `<div class="empty">${ICON.image}<b>${esc(title)}</b><div>${esc(sub)}</div></div>`;
+}
+
+/* ---------- صفحة كل الأعمال / القوائم المفلترة ---------- */
+async function pageList(filterFn, title){
+  const works = await dbGetAll('works');
+  const filtered = filterFn ? works.filter(filterFn) : works;
+  const html = `
+    ${topbar(title,{search:true})}
+    ${filtered.length? `<div class="grid">${filtered.map(workCard).join('')}</div>` : emptyState('لا توجد نتائج','لم يتم العثور على أعمال في هذا القسم')}
+  `;
+  setView(html);
+  bindCards(document);
+}
+
+/* ---------- صفحة بحث ---------- */
+async function pageSearch(){
+  const works = await dbGetAll('works');
+  const html = `
+    <div class="topbar">
+      <button class="icon-btn" onclick="nav({name:'home'})">${ICON.back}</button>
+      <h1>بحث</h1><div style="width:36px"></div>
+    </div>
+    <div class="searchbar"><input id="searchInput" placeholder="ابحث عن مانجا أو مانهوا..." autofocus></div>
+    <div class="grid" id="searchResults"></div>
+  `;
+  setView(html);
+  const inp = document.getElementById('searchInput');
+  const box = document.getElementById('searchResults');
+  function run(){
+    const q = inp.value.trim();
+    const res = q? works.filter(w=> w.title.includes(q) || (w.titleEn||'').toLowerCase().includes(q.toLowerCase())) : [];
+    box.innerHTML = res.map(workCard).join('');
+    bindCards(box);
+  }
+  inp.oninput = run;
+}
+
+/* ---------- صفحة عنصر عام قيد التطوير ---------- */
+function pagePlaceholder(title){
+  setView(`
+    ${topbar(title)}
+    ${emptyState('هذا القسم قيد التطوير','سيتم تفعيله في تحديث قادم للتطبيق')}
+  `);
+}
+
+/* ---------- صفحة التفاصيل ---------- */
+async function pageDetails(id, activeTab){
+  const w = await dbGet('works', id);
+  if(!w){ nav({name:'home'}); return; }
+  w.lastOpened = Date.now(); await dbPut('works', w);
+  const chapters = (await dbGetAll('chapters')).filter(c=>c.workId===id).sort((a,b)=>a.number-b.number);
+  activeTab = activeTab || 'details';
+
+  const tabsHtml = `<div class="tabs">
+    ${tabBtn('details','التفاصيل',activeTab)}
+    ${tabBtn('chapters',`الفصول (${chapters.length})`,activeTab)}
+    ${tabBtn('cast','الشخصيات والطاقم',activeTab)}
+    ${tabBtn('stats','الاحصائيات',activeTab)}
+  </div>`;
+
+  let body='';
+  if(activeTab==='details') body = detailsTab(w);
+  else if(activeTab==='chapters') body = chaptersTab(w, chapters);
+  else if(activeTab==='cast') body = emptyState('قريباً','بيانات الشخصيات والطاقم غير متوفرة بعد');
+  else if(activeTab==='stats') body = statsTab(w, chapters);
+
+  setView(`
+    <div class="detail-topbar">
+      <button class="icon-btn" onclick="nav({name:'home'})">${ICON.back}</button>
+      <h2>${esc(w.title)}</h2>
+      <button class="icon-btn" onclick="toggleFav('${w.id}')">${w.listStatus==='favorite'?ICON.heartFilled:ICON.heart}</button>
+    </div>
+    ${tabsHtml}
+    <div id="tabBody">${body}</div>
+  `);
+
+  document.querySelectorAll('[data-tab]').forEach(t=>{
+    t.onclick=()=> nav({name:'details', id:w.id, tab:t.dataset.tab});
+  });
+  if(activeTab==='stats') drawCharts(w, chapters);
+  if(activeTab==='chapters'){
+    document.querySelectorAll('[data-ch]').forEach(r=>{
+      r.onclick=()=> nav({name:'reader', workId:w.id, chId:r.dataset.ch});
+    });
+  }
+  if(activeTab==='details'){
+    document.getElementById('rateBtn')?.addEventListener('click', ()=>openRateModal(w));
+    document.getElementById('listBtn')?.addEventListener('click', ()=>openListModal(w));
+  }
+}
+function tabBtn(key,label,active){
+  return `<div class="tab ${active===key?'active':''}" data-tab="${key}">${label}</div>`;
+}
+
+function detailsTab(w){
+  const cover = w.cover ? `<img src="${w.cover}">` : `<div class="cover-placeholder">${esc(w.title)}</div>`;
+  const listLabels = {favorite:'في المفضلة',reading:'أقرأها حالياً',planned:'أرغب بقراءتها',completed:'تم قراءتها',onhold:'أكملها لاحقاً',dropped:'لا أرغب بقراءتها'};
+  return `
+    <div class="hero">
+      <div class="hero-cover">${cover}</div>
+      <div class="hero-info">
+        <h2>${esc(w.title)}</h2>
+        <div class="status-line">${esc(w.status||'')} &nbsp;•&nbsp; ${esc(w.type||'مانجا')}</div>
+        <div class="meta-line">${w.chapters||0} فصل${w.from? ' &nbsp;•&nbsp; منذ '+esc(w.from):''}</div>
+      </div>
+    </div>
+    <div class="rating-row">
+      <div class="rating-col"><div class="big star">${(w.avgRating||8.0).toFixed(2)}</div><div class="lbl">تقييم القراء</div></div>
+      <div class="rating-col"><div class="big">${w.userRating? w.userRating.toFixed(1):'—'}</div><div class="lbl" id="rateBtn" style="color:var(--accent);cursor:pointer">${w.userRating?'تعديل تقييمي':'إضافة تقييم'}</div></div>
+      <div class="rating-col"><div id="listBtn" style="cursor:pointer">${ICON.plus}<div class="lbl">${w.listStatus? listLabels[w.listStatus]:'قائمتي'}</div></div></div>
+    </div>
+    <div class="desc">${esc(w.desc||'لا يوجد وصف لهذا العمل حالياً.')}
+      <div class="tags">${(w.genres||[]).map(g=>`<span class="tag">${esc(g)}</span>`).join('')}</div>
+    </div>
+    <div class="meta-grid">
+      <div class="meta-cell"><div class="k">المصدر</div><div class="v">${esc(w.source||'—')}</div></div>
+      <div class="meta-cell"><div class="k">الحالة</div><div class="v">${esc(w.status||'—')}</div></div>
+      <div class="meta-cell"><div class="k">الناشر</div><div class="v">${esc(w.publisher||'—')}</div></div>
+      <div class="meta-cell"><div class="k">العنوان الانجليزي</div><div class="v">${esc(w.titleEn||'—')}</div></div>
+    </div>
+  `;
+}
+
+function chaptersTab(w, chapters){
+  if(!chapters.length) return emptyState('لا توجد فصول بعد','ارفع أول فصل من مجلد رفع في القائمة الجانبية');
+  const sorted=[...chapters].sort((a,b)=>b.number-a.number);
+  return sorted.map((c,i)=>{
+    const read = (w.readChapterIds||[]).includes(c.id);
+    const isLast = i===0 && w.status==='مكتمل';
+    return `<div class="chapter-row" data-ch="${c.id}">
+      <div class="ch-name">الفصل : ${c.number}${isLast?' و الاخيرة':''}${c.title? ' — '+esc(c.title):''}</div>
+      <div class="ch-actions">${read? `<span class="read">${ICON.eye}</span>`:ICON.eye}${ICON.comment}</div>
+    </div>`;
+  }).join('');
+}
+
+function statsTab(w, chapters){
+  return `
+    <div class="stat-box">
+      <h3>تقييمات القراء</h3>
+      <canvas id="barChart" height="170"></canvas>
+      <div class="stat-note">بيانات تجريبية لحين ربط التطبيق بقاعدة بيانات مجتمعية</div>
+    </div>
+    <div class="stat-box">
+      <h3>حالة قراءتك لهذا العمل</h3>
+      <div class="donut-wrap">
+        <canvas id="donutChart" width="130" height="130" style="width:130px;height:130px"></canvas>
+        <div class="legend" id="donutLegend"></div>
+      </div>
+    </div>
+  `;
+}
+function drawCharts(w, chapters){
+  const dist = w.dist || seededDist(w.id);
+  new Chart(document.getElementById('barChart'), {
+    type:'bar',
+    data:{ labels:['1','2','3','4','5','6','7','8','9','10'],
+      datasets:[{data:dist, backgroundColor:'#3d97e8', borderRadius:4, maxBarThickness:26}] },
+    options:{ plugins:{legend:{display:false}}, scales:{
+      x:{grid:{display:false}, ticks:{color:'#93a1b3'}},
+      y:{display:false, grid:{display:false}} } }
+  });
+  const readCount = (w.readChapterIds||[]).length;
+  const unread = Math.max((chapters.length||0)-readCount,0);
+  const donutData = [readCount, unread];
+  const colors=['#3fbf7f','#e0555a'];
+  const labels=[`مقروءة : ${readCount}`,`غير مقروءة : ${unread}`];
+  new Chart(document.getElementById('donutChart'), {
+    type:'doughnut',
+    data:{ labels, datasets:[{data: (readCount+unread)?donutData:[1], backgroundColor:(readCount+unread)?colors:['#26324356'], borderWidth:0}] },
+    options:{ cutout:'68%', plugins:{legend:{display:false}} }
+  });
+  document.getElementById('donutLegend').innerHTML = labels.map((l,i)=>
+    `<div class="legend-item"><span class="legend-dot" style="background:${colors[i]}"></span>${l}</div>`
+  ).join('');
+}
+
+async function toggleFav(id){
+  const w = await dbGet('works', id);
+  w.listStatus = w.listStatus==='favorite' ? null : 'favorite';
+  await dbPut('works', w);
+  nav({name:route.name, id:route.id, tab:route.tab});
+}
+
+/* ---------- مودال التقييم ---------- */
+function openRateModal(w){
+  const stars = [1,2,3,4,5,6,7,8,9,10];
+  showModal(`
+    <h3>قيّم "${esc(w.title)}"</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0">
+      ${stars.map(n=>`<button class="btn btn-outline" style="min-width:38px;padding:8px 0" data-star="${n}">${n}</button>`).join('')}
+    </div>
+    <div class="modal-actions"><button class="btn btn-outline btn-block" onclick="closeModal()">إلغاء</button></div>
+  `);
+  document.querySelectorAll('[data-star]').forEach(b=>{
+    b.onclick=async ()=>{
+      w.userRating = Number(b.dataset.star);
+      await dbPut('works', w);
+      closeModal(); toast('تم حفظ تقييمك');
+      nav({name:'details', id:w.id, tab:'details'});
+    };
+  });
+}
+function openListModal(w){
+  const opts=[
+    ['favorite','مفضلتي'],['reading','أقرأها حالياً'],['planned','أرغب بقراءتها'],
+    ['completed','تم قراءتها'],['onhold','أكملها لاحقاً'],['dropped','لا أرغب بقراءتها']
+  ];
+  showModal(`
+    <h3>أضف إلى قائمتي</h3>
+    ${opts.map(([k,l])=>`<div class="drawer-item" style="padding:12px 4px" data-list="${k}">
+      <span style="width:18px;text-align:center">${w.listStatus===k?'●':'○'}</span><span>${l}</span></div>`).join('')}
+    <div class="modal-actions" style="margin-top:10px">
+      <button class="btn btn-outline btn-block" onclick="closeModal()">إغلاق</button>
+    </div>
+  `);
+  document.querySelectorAll('[data-list]').forEach(b=>{
+    b.onclick=async ()=>{
+      w.listStatus = b.dataset.list;
+      await dbPut('works', w);
+      closeModal(); toast('تم التحديث');
+      nav({name:'details', id:w.id, tab:'details'});
+    };
+  });
+}
+
+/* ---------- القارئ ---------- */
+async function pageReader(workId, chId){
+  const w = await dbGet('works', workId);
+  const chapters = (await dbGetAll('chapters')).filter(c=>c.workId===workId).sort((a,b)=>a.number-b.number);
+  const idx = chapters.findIndex(c=>c.id===chId);
+  const ch = chapters[idx];
+  if(!ch){ nav({name:'details', id:workId, tab:'chapters'}); return; }
+
+  if(!(w.readChapterIds||[]).includes(ch.id)){
+    w.readChapterIds = [...(w.readChapterIds||[]), ch.id];
+    await dbPut('works', w);
+  }
+
+  const pagesHtml = ch.pages.length
+    ? ch.pages.map(p=>`<img src="${p}">`).join('')
+    : `<div style="padding:80px 20px;text-align:center;color:var(--faint)">لم يتم رفع صفحات لهذا الفصل بعد</div>`;
+
+  setView(`
+    <div class="reader-top">
+      <button class="icon-btn" onclick="nav({name:'details', id:'${workId}', tab:'chapters'})">${ICON.back}</button>
+      <span style="font-size:13.5px;font-weight:700">${esc(w.title)} — الفصل ${ch.number}</span>
+      <span style="width:36px"></span>
+    </div>
+    <div class="reader-pages">${pagesHtml}</div>
+    <div class="reader-bottom">
+      <button class="btn btn-outline" ${idx<=0?'disabled style="opacity:.4"':''} onclick="${idx>0?`nav({name:'reader',workId:'${workId}',chId:'${chapters[idx-1].id}'})`:''}">الفصل السابق</button>
+      <button class="btn btn-accent" ${idx>=chapters.length-1?'disabled style="opacity:.4"':''} onclick="${idx<chapters.length-1?`nav({name:'reader',workId:'${workId}',chId:'${chapters[idx+1].id}'})`:''}">الفصل التالي</button>
+    </div>
+  `);
+}
+
+/* =========================================================
+   مجلد رفع — قسم رفع أعمال المانجا والمانهوا
+   ========================================================= */
+let uploadTypeFilter='all';
+async function pageUpload(){
+  const works = (await dbGetAll('works')).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const filtered = uploadTypeFilter==='all'? works : works.filter(w=>w.type===uploadTypeFilter);
+  const html = `
+    ${topbar('مجلد رفع')}
+    <div class="upload-hero">
+      <p>هنا تضيف أعمالك وترفع فصول المانجا والمانهوا الخاصة بك. الأعمال المضافة هنا تظهر تلقائياً في كل أقسام التطبيق.</p>
+    </div>
+    <div class="type-switch">
+      <button class="${uploadTypeFilter==='all'?'active':''}" data-tf="all">الكل</button>
+      <button class="${uploadTypeFilter==='مانجا'?'active':''}" data-tf="مانجا">مانجا</button>
+      <button class="${uploadTypeFilter==='مانهوا'?'active':''}" data-tf="مانهوا">مانهوا</button>
+    </div>
+    ${filtered.length? filtered.map(uploadWorkCard).join('') : emptyState('لا توجد أعمال بعد','اضغط على زر "+ عمل جديد" بالأسفل للبدء')}
+    <div style="height:80px"></div>
+    <div class="fab"><button class="btn btn-accent btn-block" id="newWorkBtn">${ICON.plus} عمل جديد</button></div>
+  `;
+  setView(html);
+  document.querySelectorAll('[data-tf]').forEach(b=> b.onclick=()=>{ uploadTypeFilter=b.dataset.tf; pageUpload(); });
+  document.getElementById('newWorkBtn').onclick = openNewWorkModal;
+  document.querySelectorAll('[data-addch]').forEach(b=> b.onclick=(e)=>{ e.stopPropagation(); openAddChapterModal(b.dataset.addch); });
+  document.querySelectorAll('[data-delwork]').forEach(b=> b.onclick=async (e)=>{
+    e.stopPropagation();
+    if(!confirm('حذف هذا العمل وكل فصوله؟')) return;
+    const chs=(await dbGetAll('chapters')).filter(c=>c.workId===b.dataset.delwork);
+    for(const c of chs) await dbDelete('chapters', c.id);
+    await dbDelete('works', b.dataset.delwork);
+    toast('تم الحذف'); pageUpload();
+  });
+  document.querySelectorAll('[data-openwork]').forEach(el=> el.onclick=()=> nav({name:'details', id:el.dataset.openwork, tab:'details'}));
+  document.querySelectorAll('[data-delch]').forEach(b=> b.onclick=async (e)=>{
+    e.stopPropagation();
+    await dbDelete('chapters', b.dataset.delch);
+    toast('تم حذف الفصل'); pageUpload();
+  });
+}
+
+function uploadWorkCard(w){
+  const cover = w.cover? `<img src="${w.cover}">` : `<div class="ph">${esc(w.title)}</div>`;
+  return `<div class="upload-work">
+    <div class="upload-work-head" data-openwork="${w.id}">
+      ${cover}
+      <div class="upload-work-body">
+        <h4>${esc(w.title)}</h4>
+        <div class="sub">${esc(w.type)} • ${esc(w.status)} • ${w.chapters||0} فصل</div>
+      </div>
+    </div>
+    <div class="upload-work-actions">
+      <button class="btn btn-outline" data-addch="${w.id}">${ICON.upload} رفع فصل</button>
+      <button class="btn btn-outline" style="color:var(--danger)" data-delwork="${w.id}">${ICON.trash} حذف</button>
+    </div>
+  </div>`;
+}
+
+function showModal(html){
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
+document.getElementById('modalOverlay').addEventListener('click', e=>{ if(e.target.id==='modalOverlay') closeModal(); });
+
+function openNewWorkModal(){
+  showModal(`
+    <h3>عمل جديد</h3>
+    <div class="field"><label>عنوان العمل</label><input type="text" id="nw_title" placeholder="مثال: ظل التاج المفقود"></div>
+    <div class="field"><label>العنوان بالإنجليزية (اختياري)</label><input type="text" id="nw_titleEn"></div>
+    <div class="field"><label>النوع</label>
+      <div class="radio-row">
+        <label><input type="radio" name="nw_type" value="مانجا" checked><span>مانجا</span></label>
+        <label><input type="radio" name="nw_type" value="مانهوا"><span>مانهوا</span></label>
+        <label><input type="radio" name="nw_type" value="مانها"><span>مانها</span></label>
+      </div>
+    </div>
+    <div class="field"><label>حالة العمل</label>
+      <div class="radio-row">
+        <label><input type="radio" name="nw_status" value="مستمر" checked><span>مستمر</span></label>
+        <label><input type="radio" name="nw_status" value="مكتمل"><span>مكتمل</span></label>
+        <label><input type="radio" name="nw_status" value="متوقف"><span>متوقف</span></label>
+      </div>
+    </div>
+    <div class="field"><label>التصنيفات (افصل بينها بفاصلة)</label><input type="text" id="nw_genres" placeholder="أكشن، خيال، دراما"></div>
+    <div class="field"><label>الوصف</label><textarea id="nw_desc" placeholder="نبذة عن القصة..."></textarea></div>
+    <div class="field"><label>غلاف العمل</label>
+      <div class="filepick" id="nw_coverPick">${ICON.image}<div style="margin-top:6px">اضغط لاختيار صورة الغلاف</div></div>
+      <input type="file" id="nw_cover" accept="image/*" class="hidden">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-accent" id="nw_save">حفظ العمل</button>
+    </div>
+  `);
+  const coverInput = document.getElementById('nw_cover');
+  document.getElementById('nw_coverPick').onclick = ()=>coverInput.click();
+  let coverData=null;
+  coverInput.onchange = async ()=>{
+    if(coverInput.files[0]){
+      coverData = await fileToDataURL(coverInput.files[0]);
+      document.getElementById('nw_coverPick').innerHTML = `<img src="${coverData}" style="max-height:90px;border-radius:6px">`;
+    }
+  };
+  document.getElementById('nw_save').onclick = async ()=>{
+    const title = document.getElementById('nw_title').value.trim();
+    if(!title){ toast('الرجاء إدخال عنوان العمل'); return; }
+    const type = document.querySelector('[name=nw_type]:checked').value;
+    const status = document.querySelector('[name=nw_status]:checked').value;
+    const genres = document.getElementById('nw_genres').value.split('،').join(',').split(',').map(s=>s.trim()).filter(Boolean);
+    const w = {
+      id: uid(), title, titleEn: document.getElementById('nw_titleEn').value.trim(),
+      type, status, genres, desc: document.getElementById('nw_desc').value.trim(),
+      cover: coverData, source: type==='مانهوا'?'ويب تون':'مانجا ويب', publisher:'رفع شخصي',
+      from: new Date().getFullYear().toString(), chapters:0, listStatus:null, userRating:0,
+      readChapterIds:[], avgRating: (7+Math.random()*2), dist:null, createdAt: Date.now(), updatedAt: Date.now()
+    };
+    w.dist = seededDist(w.id);
+    await dbPut('works', w);
+    closeModal(); toast('تمت إضافة العمل بنجاح'); pageUpload();
+  };
+}
+
+function openAddChapterModal(workId){
+  showModal(`
+    <h3>رفع فصل جديد</h3>
+    <div class="field"><label>رقم الفصل</label><input type="text" id="ac_num" inputmode="numeric" placeholder="1"></div>
+    <div class="field"><label>عنوان الفصل (اختياري)</label><input type="text" id="ac_title"></div>
+    <div class="field"><label>صفحات الفصل (يمكن اختيار عدة صور)</label>
+      <div class="filepick small" id="ac_pick">${ICON.upload}<div style="margin-top:4px">اضغط لاختيار صور الصفحات</div></div>
+      <input type="file" id="ac_files" accept="image/*" multiple class="hidden">
+      <div class="file-list" id="ac_fileList"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-accent" id="ac_save">رفع الفصل</button>
+    </div>
+  `);
+  const filesInput = document.getElementById('ac_files');
+  document.getElementById('ac_pick').onclick=()=>filesInput.click();
+  filesInput.onchange = ()=>{
+    document.getElementById('ac_fileList').innerHTML =
+      [...filesInput.files].map(f=>`<span>${esc(f.name)}</span>`).join('');
+  };
+  document.getElementById('ac_save').onclick = async ()=>{
+    const w = await dbGet('works', workId);
+    const num = Number(document.getElementById('ac_num').value) || ((w.chapters||0)+1);
+    const title = document.getElementById('ac_title').value.trim();
+    const files = [...filesInput.files];
+    const pages = [];
+    for(const f of files){ pages.push(await fileToDataURL(f)); }
+    await dbPut('chapters', {id:uid(), workId, number:num, title, pages, createdAt:Date.now()});
+    w.chapters = (w.chapters||0)+1; w.updatedAt=Date.now();
+    if(!w.cover && pages[0]) w.cover = pages[0];
+    await dbPut('works', w);
+    closeModal(); toast('تم رفع الفصل بنجاح'); pageUpload();
+  };
+}
+
+/* ---------- إظهار المحتوى ---------- */
+function setView(html){ document.getElementById('app').innerHTML = html; renderDrawer(); }
+
+/* ---------- الموجه الرئيسي ---------- */
+async function render(){
+  closeModal(); closeDrawer();
+  switch(route.name){
+    case 'home': return pageHome();
+    case 'list': return pageList(null,'قائمة المانجا');
+    case 'myList': return pageList(w=>!!w.listStatus,'قائمتي');
+    case 'favorites': return pageList(w=>w.listStatus==='favorite','مفضلتي');
+    case 'recent': {
+      const works=(await dbGetAll('works')).filter(w=>w.lastOpened).sort((a,b)=>b.lastOpened-a.lastOpened);
+      return pageList(w=>!!w.lastOpened,'اخر القراءات');
+    }
+    case 'search': return pageSearch();
+    case 'details': return pageDetails(route.id, route.tab);
+    case 'reader': return pageReader(route.workId, route.chId);
+    case 'upload': return pageUpload();
+    case 'genres': return pagePlaceholder('الأنواع');
+    case 'ratingGlobal': return pagePlaceholder('التقييم العالمي');
+    case 'ratingArabic': return pagePlaceholder('التقييم العربي');
+    case 'customList': return pagePlaceholder('القائمة المخصصة');
+    case 'favChars': return pagePlaceholder('شخصياتي المفضلة');
+    case 'downloads': return pagePlaceholder('تحميلاتي');
+    case 'popularChars': return pagePlaceholder('الشخصيات الاكثر شعبية');
+    case 'recommend': return pagePlaceholder('التوصيات');
+    case 'schedule': return pagePlaceholder('مواعيد نزول الفصول');
+    default: return pageHome();
+  }
+}
+
+/* ---------- بدء التشغيل ---------- */
+(async function init(){
+  await openDB();
+  await seedIfEmpty();
+  render();
+})();
+</script>
+</body>
+</html>
