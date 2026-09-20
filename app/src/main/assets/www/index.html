@@ -24,6 +24,29 @@
   --green:#3fbf7f;
   --radius:10px;
 }
+/* يتبع التطبيق وضع الجهاز (فاتح/داكن) تلقائياً */
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4f6f9;
+    --bg2:#ffffff;
+    --card:#ffffff;
+    --card2:#eef1f6;
+    --border:rgba(20,30,45,.09);
+    --text:#151c26;
+    --dim:#5c6c80;
+    --faint:#8996a6;
+    --star:#c98a00;
+  }
+  ::-webkit-scrollbar-thumb{background:#c7d0db}
+  .card-cover,.hero-cover{background:linear-gradient(150deg,#e4e9f0,#f4f6f9)}
+  .upload-work-head img,.upload-work-head .ph{background:#e4e9f0}
+  .topbar,.detail-topbar{background:rgba(244,246,249,.92)}
+  .reader-top,.reader-bottom{background:rgba(255,255,255,.92)}
+  .modal{background:#ffffff}
+  .drawer{background:#ffffff}
+  .toast{background:#233246;color:#fff}
+  .tag{background:#e7ebf1}
+}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
@@ -31,6 +54,7 @@ body{
   font-family:'Tajawal',sans-serif;
   font-size:15px;
   overflow-x:hidden;
+  transition:background .2s,color .2s;
 }
 img{max-width:100%;display:block}
 button,input,textarea,select{font-family:inherit;color:inherit}
@@ -203,11 +227,16 @@ a{color:inherit;text-decoration:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
 
 /* ===== قارئ الفصل ===== */
-.reader-top{position:fixed;top:0;right:0;left:0;max-width:480px;margin:0 auto;z-index:40;background:rgba(10,14,20,.9);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)}
+.reader-top{position:fixed;top:0;right:0;left:0;max-width:480px;margin:0 auto;z-index:40;background:rgba(10,14,20,.9);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);transition:transform .22s ease,opacity .22s ease}
 .reader-pages{padding-top:56px}
 .reader-pages img{width:100%;display:block}
-.reader-bottom{position:fixed;bottom:0;right:0;left:0;max-width:480px;margin:0 auto;z-index:40;background:rgba(10,14,20,.92);display:flex;gap:10px;padding:10px 14px;border-top:1px solid var(--border)}
+.reader-bottom{position:fixed;bottom:0;right:0;left:0;max-width:480px;margin:0 auto;z-index:40;background:rgba(10,14,20,.92);display:flex;gap:10px;padding:10px 14px;border-top:1px solid var(--border);transition:transform .22s ease,opacity .22s ease}
 .reader-bottom .btn{flex:1}
+/* عند إخفاء واجهة القراءة باللمس */
+body.reader-ui-hidden .reader-top{transform:translateY(-100%);opacity:0;pointer-events:none}
+body.reader-ui-hidden .reader-bottom{transform:translateY(100%);opacity:0;pointer-events:none}
+.reader-tap-hint{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);background:rgba(20,28,40,.85);color:#fff;font-size:11.5px;padding:6px 14px;border-radius:20px;z-index:41;opacity:0;transition:opacity .3s;pointer-events:none}
+.reader-tap-hint.show{opacity:1}
 
 .hidden{display:none!important}
 </style>
@@ -249,6 +278,7 @@ const ICON = {
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>',
   chevronDown:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
   image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a5 5 0 007.1 0l3-3a5 5 0 00-7.1-7.1l-1.5 1.4"/><path d="M14 10a5 5 0 00-7.1 0l-3 3a5 5 0 007.1 7.1l1.4-1.4"/></svg>',
 };
 
 /* ---------- IndexedDB ---------- */
@@ -277,9 +307,9 @@ async function seedIfEmpty(){
   const works = await dbGetAll('works');
   if(works.length) return;
   const demo = [
-    {id:uid(), title:'ظل التاج المفقود', titleEn:'Shadow of the Lost Crown', type:'مانهوا', status:'مستمر', genres:['أكشن','خيال','دراما'], desc:'بعد أن فقد عرشه في ليلة واحدة، يخوض الأمير كيان رحلة انتقام عبر ممالك مظلمة، حاملاً سراً قد يقلب موازين القوى في القارة بأكملها.', source:'ويب تون', publisher:'استوديو بيور', from:'2025', chapters:32},
-    {id:uid(), title:'أكاديمية السحرة الصامتين', titleEn:'Silent Mages Academy', type:'مانجا', status:'مكتمل', genres:['مدرسي','خيال','كوميديا'], desc:'في أكاديمية يُمنع فيها الكلام أثناء استخدام السحر، تكتشف الطالبة نور موهبة نادرة تجعلها محط أنظار الجميع.', source:'مانجا ويب', publisher:'دار نشر الفجر', from:'2023', chapters:87},
-    {id:uid(), title:'قلب من حديد', titleEn:'Heart of Iron', type:'مانهوا', status:'مستمر', genres:['أكشن','رياضة'], desc:'حارس مرمى سابق يعود للملاعب بعد إصابة كادت تنهي مسيرته، ليواجه فريقاً جديداً وحلماً قديماً لم يمت بعد.', source:'ويب تون', publisher:'استوديو بيور', from:'2024', chapters:19},
+    {id:uid(), title:'ظل التاج المفقود', titleEn:'Shadow of the Lost Crown', type:'مانهوا', status:'مستمر', genres:['أكشن','خيال','دراما'], desc:'بعد أن فقد عرشه في ليلة واحدة، يخوض الأمير كيان رحلة انتقام عبر ممالك مظلمة، حاملاً سراً قد يقلب موازين القوى في القارة بأكملها.', source:'ويب تون', sourceUrl:'https://example.com/shadow-of-the-lost-crown', publisher:'استوديو بيور', from:'2025', chapters:32},
+    {id:uid(), title:'أكاديمية السحرة الصامتين', titleEn:'Silent Mages Academy', type:'مانجا', status:'مكتمل', genres:['مدرسي','خيال','كوميديا'], desc:'في أكاديمية يُمنع فيها الكلام أثناء استخدام السحر، تكتشف الطالبة نور موهبة نادرة تجعلها محط أنظار الجميع.', source:'مانجا ويب', sourceUrl:'', publisher:'دار نشر الفجر', from:'2023', chapters:87},
+    {id:uid(), title:'قلب من حديد', titleEn:'Heart of Iron', type:'مانهوا', status:'مستمر', genres:['أكشن','رياضة'], desc:'حارس مرمى سابق يعود للملاعب بعد إصابة كادت تنهي مسيرته، ليواجه فريقاً جديداً وحلماً قديماً لم يمت بعد.', source:'ويب تون', sourceUrl:'https://example.com/heart-of-iron', publisher:'استوديو بيور', from:'2024', chapters:19},
   ];
   for(const w of demo){
     w.cover=null; w.listStatus=null; w.userRating=0; w.readChapterIds=[]; w.lastOpened=0;
@@ -335,7 +365,7 @@ const DRAWER_ITEMS = [
   {name:'recommend', label:'التوصيات', icon:ICON.puzzle},
   {name:'schedule', label:'مواعيد نزول الفصول', icon:ICON.calendar},
   '-',
-  {name:'upload', label:'مجلد رفع', icon:ICON.upload, special:true},
+  {name:'upload', label:'مجلد روابط', icon:ICON.link, special:true},
 ];
 function renderDrawer(){
   const el=document.getElementById('drawer');
@@ -398,7 +428,7 @@ async function pageHome(){
   works.sort((a,b)=> (b.updatedAt||0)-(a.updatedAt||0));
   const html = `
     ${topbar('أخر التحديثات',{search:true})}
-    ${works.length? `<div class="grid">${works.map(workCard).join('')}</div>` : emptyState('لا توجد أعمال بعد','ابدأ برفع أول عمل من "مجلد رفع" في القائمة الجانبية')}
+    ${works.length? `<div class="grid">${works.map(workCard).join('')}</div>` : emptyState('لا توجد أعمال بعد','ابدأ بإضافة أول عمل من "مجلد روابط" في القائمة الجانبية')}
   `;
   setView(html);
   bindCards(document);
@@ -520,6 +550,9 @@ function detailsTab(w){
     <div class="desc">${esc(w.desc||'لا يوجد وصف لهذا العمل حالياً.')}
       <div class="tags">${(w.genres||[]).map(g=>`<span class="tag">${esc(g)}</span>`).join('')}</div>
     </div>
+    ${w.sourceUrl? `<div style="padding:0 16px 14px">
+      <a href="${esc(w.sourceUrl)}" target="_blank" rel="noopener" class="btn btn-outline btn-block" style="color:var(--accent);border-color:var(--accent)">${ICON.link} مصدر العمل — فتح الموقع الأصلي</a>
+    </div>`:''}
     <div class="meta-grid">
       <div class="meta-cell"><div class="k">المصدر</div><div class="v">${esc(w.source||'—')}</div></div>
       <div class="meta-cell"><div class="k">الحالة</div><div class="v">${esc(w.status||'—')}</div></div>
@@ -530,7 +563,7 @@ function detailsTab(w){
 }
 
 function chaptersTab(w, chapters){
-  if(!chapters.length) return emptyState('لا توجد فصول بعد','ارفع أول فصل من مجلد رفع في القائمة الجانبية');
+  if(!chapters.length) return emptyState('لا توجد فصول بعد','أضف أول فصل من مجلد روابط في القائمة الجانبية');
   const sorted=[...chapters].sort((a,b)=>b.number-a.number);
   return sorted.map((c,i)=>{
     const read = (w.readChapterIds||[]).includes(c.id);
@@ -633,6 +666,10 @@ function openListModal(w){
 }
 
 /* ---------- القارئ ---------- */
+// آخر موضع قراءة يُحفظ محلياً على جهاز المستخدم نفسه، بحيث يفتح كل فصل من حيث توقف بالضبط
+function readPosKey(chId){ return 'readpos_'+chId; }
+let __readerScrollHandler=null, __readerSaveTimer=null;
+
 async function pageReader(workId, chId){
   const w = await dbGet('works', workId);
   const chapters = (await dbGetAll('chapters')).filter(c=>c.workId===workId).sort((a,b)=>a.number-b.number);
@@ -645,35 +682,71 @@ async function pageReader(workId, chId){
     await dbPut('works', w);
   }
 
-  const pagesHtml = ch.pages.length
-    ? ch.pages.map(p=>`<img src="${p}">`).join('')
-    : `<div style="padding:80px 20px;text-align:center;color:var(--faint)">لم يتم رفع صفحات لهذا الفصل بعد</div>`;
+  const hasPages = ch.pages && ch.pages.length;
+  let pagesHtml;
+  if(hasPages){
+    pagesHtml = ch.pages.map(p=>`<img src="${p}">`).join('');
+  } else if(ch.sourceUrl){
+    pagesHtml = `<div style="padding:70px 24px;text-align:center;color:var(--dim)">
+      لم يتم رفع صفحات لهذا الفصل، لكنه متوفر عند المصدر الأصلي.
+      <div style="margin-top:16px"><a href="${esc(ch.sourceUrl)}" target="_blank" rel="noopener" class="btn btn-accent">${ICON.link} فتح الفصل من المصدر</a></div>
+    </div>`;
+  } else {
+    pagesHtml = `<div style="padding:80px 20px;text-align:center;color:var(--faint)">لا يوجد محتوى لهذا الفصل بعد</div>`;
+  }
 
+  document.body.classList.remove('reader-ui-hidden');
   setView(`
-    <div class="reader-top">
+    <div class="reader-top" id="readerTop">
       <button class="icon-btn" onclick="nav({name:'details', id:'${workId}', tab:'chapters'})">${ICON.back}</button>
       <span style="font-size:13.5px;font-weight:700">${esc(w.title)} — الفصل ${ch.number}</span>
       <span style="width:36px"></span>
     </div>
-    <div class="reader-pages">${pagesHtml}</div>
-    <div class="reader-bottom">
+    <div class="reader-pages" id="readerPages">${pagesHtml}</div>
+    <div class="reader-bottom" id="readerBottom">
       <button class="btn btn-outline" ${idx<=0?'disabled style="opacity:.4"':''} onclick="${idx>0?`nav({name:'reader',workId:'${workId}',chId:'${chapters[idx-1].id}'})`:''}">الفصل السابق</button>
       <button class="btn btn-accent" ${idx>=chapters.length-1?'disabled style="opacity:.4"':''} onclick="${idx<chapters.length-1?`nav({name:'reader',workId:'${workId}',chId:'${chapters[idx+1].id}'})`:''}">الفصل التالي</button>
     </div>
+    <div class="reader-tap-hint" id="readerHint">اضغط في أي مكان لإخفاء/إظهار الأزرار</div>
   `);
+
+  // استعادة آخر موضع قراءة محفوظ لهذا الفصل بالضبط
+  if(hasPages){
+    const savedPos = Number(localStorage.getItem(readPosKey(ch.id)) || 0);
+    if(savedPos>0) requestAnimationFrame(()=> window.scrollTo(0, savedPos));
+  }
+
+  // حفظ موضع القراءة أثناء التمرير
+  if(__readerScrollHandler) window.removeEventListener('scroll', __readerScrollHandler);
+  __readerScrollHandler = ()=>{
+    clearTimeout(__readerSaveTimer);
+    __readerSaveTimer = setTimeout(()=>{
+      localStorage.setItem(readPosKey(ch.id), String(window.scrollY));
+    }, 250);
+  };
+  window.addEventListener('scroll', __readerScrollHandler, {passive:true});
+
+  // اللمس على الشاشة يخفي/يظهر شريطي الأعلى والأسفل مثل تطبيقات القراءة المعروفة
+  const hint = document.getElementById('readerHint');
+  document.getElementById('readerPages').onclick = ()=>{
+    document.body.classList.toggle('reader-ui-hidden');
+  };
+  hint.classList.add('show');
+  setTimeout(()=> hint.classList.remove('show'), 2200);
 }
 
 /* =========================================================
-   مجلد رفع — قسم رفع أعمال المانجا والمانهوا
+   مجلد روابط — إضافة أعمال منسوبة لمواقع مصدر + رفع فصولها
+   كل عمل يحمل رابط المصدر الذي أُخذ منه، ويظهر بصفحة التفاصيل
    ========================================================= */
 let uploadTypeFilter='all';
 async function pageUpload(){
   const works = (await dbGetAll('works')).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const filtered = uploadTypeFilter==='all'? works : works.filter(w=>w.type===uploadTypeFilter);
   const html = `
-    ${topbar('مجلد رفع')}
+    ${topbar('مجلد روابط')}
     <div class="upload-hero">
-      <p>هنا تضيف أعمالك وترفع فصول المانجا والمانهوا الخاصة بك. الأعمال المضافة هنا تظهر تلقائياً في كل أقسام التطبيق.</p>
+      <p>هنا تضيف أعمال مانجا ومانهوا مع رابط الموقع المصدر الذي أُخذت منه، وترفع فصولها. الأعمال المضافة هنا تظهر تلقائياً في كل أقسام التطبيق، ورابط المصدر يظهر لزوار صفحة التفاصيل.</p>
     </div>
     <div class="type-switch">
       <button class="${uploadTypeFilter==='all'?'active':''}" data-tf="all">الكل</button>
@@ -712,10 +785,11 @@ function uploadWorkCard(w){
       <div class="upload-work-body">
         <h4>${esc(w.title)}</h4>
         <div class="sub">${esc(w.type)} • ${esc(w.status)} • ${w.chapters||0} فصل</div>
+        ${w.sourceUrl? `<div class="sub" style="color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ICON.link} ${esc(w.sourceUrl)}</div>`:'<div class="sub" style="color:var(--danger)">بدون رابط مصدر</div>'}
       </div>
     </div>
     <div class="upload-work-actions">
-      <button class="btn btn-outline" data-addch="${w.id}">${ICON.upload} رفع فصل</button>
+      <button class="btn btn-outline" data-addch="${w.id}">${ICON.upload} إضافة فصل</button>
       <button class="btn btn-outline" style="color:var(--danger)" data-delwork="${w.id}">${ICON.trash} حذف</button>
     </div>
   </div>`;
@@ -748,6 +822,7 @@ function openNewWorkModal(){
       </div>
     </div>
     <div class="field"><label>التصنيفات (افصل بينها بفاصلة)</label><input type="text" id="nw_genres" placeholder="أكشن، خيال، دراما"></div>
+    <div class="field"><label>رابط الموقع المصدر (الموقع الذي أُخذ منه العمل)</label><input type="text" id="nw_sourceUrl" placeholder="https://example.com/manga-name" dir="ltr" style="text-align:left"></div>
     <div class="field"><label>الوصف</label><textarea id="nw_desc" placeholder="نبذة عن القصة..."></textarea></div>
     <div class="field"><label>غلاف العمل</label>
       <div class="filepick" id="nw_coverPick">${ICON.image}<div style="margin-top:6px">اضغط لاختيار صورة الغلاف</div></div>
@@ -776,6 +851,7 @@ function openNewWorkModal(){
     const w = {
       id: uid(), title, titleEn: document.getElementById('nw_titleEn').value.trim(),
       type, status, genres, desc: document.getElementById('nw_desc').value.trim(),
+      sourceUrl: document.getElementById('nw_sourceUrl').value.trim(),
       cover: coverData, source: type==='مانهوا'?'ويب تون':'مانجا ويب', publisher:'رفع شخصي',
       from: new Date().getFullYear().toString(), chapters:0, listStatus:null, userRating:0,
       readChapterIds:[], avgRating: (7+Math.random()*2), dist:null, createdAt: Date.now(), updatedAt: Date.now()
@@ -788,17 +864,18 @@ function openNewWorkModal(){
 
 function openAddChapterModal(workId){
   showModal(`
-    <h3>رفع فصل جديد</h3>
+    <h3>إضافة فصل جديد</h3>
     <div class="field"><label>رقم الفصل</label><input type="text" id="ac_num" inputmode="numeric" placeholder="1"></div>
     <div class="field"><label>عنوان الفصل (اختياري)</label><input type="text" id="ac_title"></div>
-    <div class="field"><label>صفحات الفصل (يمكن اختيار عدة صور)</label>
+    <div class="field"><label>رابط الفصل عند المصدر (اختياري)</label><input type="text" id="ac_sourceUrl" placeholder="https://example.com/chapter-1" dir="ltr" style="text-align:left"></div>
+    <div class="field"><label>صفحات الفصل (يمكن اختيار عدة صور — اختياري إذا وضعت رابط الفصل)</label>
       <div class="filepick small" id="ac_pick">${ICON.upload}<div style="margin-top:4px">اضغط لاختيار صور الصفحات</div></div>
       <input type="file" id="ac_files" accept="image/*" multiple class="hidden">
       <div class="file-list" id="ac_fileList"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
-      <button class="btn btn-accent" id="ac_save">رفع الفصل</button>
+      <button class="btn btn-accent" id="ac_save">حفظ الفصل</button>
     </div>
   `);
   const filesInput = document.getElementById('ac_files');
@@ -811,14 +888,16 @@ function openAddChapterModal(workId){
     const w = await dbGet('works', workId);
     const num = Number(document.getElementById('ac_num').value) || ((w.chapters||0)+1);
     const title = document.getElementById('ac_title').value.trim();
+    const sourceUrl = document.getElementById('ac_sourceUrl').value.trim();
     const files = [...filesInput.files];
+    if(!files.length && !sourceUrl){ toast('أضف صور الصفحات أو رابط الفصل على الأقل'); return; }
     const pages = [];
     for(const f of files){ pages.push(await fileToDataURL(f)); }
-    await dbPut('chapters', {id:uid(), workId, number:num, title, pages, createdAt:Date.now()});
+    await dbPut('chapters', {id:uid(), workId, number:num, title, sourceUrl, pages, createdAt:Date.now()});
     w.chapters = (w.chapters||0)+1; w.updatedAt=Date.now();
     if(!w.cover && pages[0]) w.cover = pages[0];
     await dbPut('works', w);
-    closeModal(); toast('تم رفع الفصل بنجاح'); pageUpload();
+    closeModal(); toast('تم حفظ الفصل بنجاح'); pageUpload();
   };
 }
 
@@ -828,6 +907,11 @@ function setView(html){ document.getElementById('app').innerHTML = html; renderD
 /* ---------- الموجه الرئيسي ---------- */
 async function render(){
   closeModal(); closeDrawer();
+  if(route.name!=='reader' && __readerScrollHandler){
+    window.removeEventListener('scroll', __readerScrollHandler);
+    __readerScrollHandler=null;
+    document.body.classList.remove('reader-ui-hidden');
+  }
   switch(route.name){
     case 'home': return pageHome();
     case 'list': return pageList(null,'قائمة المانجا');
