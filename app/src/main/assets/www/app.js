@@ -692,6 +692,11 @@ async function pageUpload(){
   document.getElementById('newWorkBtn').onclick = openNewWorkModal;
   document.getElementById('bulkBtn').onclick = openBulkAddModal;
   document.querySelectorAll('[data-addch]').forEach(b=> b.onclick=(e)=>{ e.stopPropagation(); openAddChapterModal(b.dataset.addch); });
+  document.querySelectorAll('[data-editwork]').forEach(b=> b.onclick=async (e)=>{
+    e.stopPropagation();
+    const w = await Store.getWork(b.dataset.editwork);
+    if(w) openNewWorkModal(w);
+  });
   document.querySelectorAll('[data-delwork]').forEach(b=> b.onclick=async (e)=>{
     e.stopPropagation();
     if(!confirm('حذف هذا العمل وكل فصوله؟')) return;
@@ -715,8 +720,9 @@ function uploadWorkCard(w){
       </div>
     </div>
     <div class="upload-work-actions">
-      <button class="btn btn-outline" data-addch="${w.id}">${ICON.upload} إضافة فصل</button>
-      <button class="btn btn-outline" style="color:var(--danger)" data-delwork="${w.id}">${ICON.trash} حذف</button>
+      <button class="btn btn-outline" data-editwork="${w.id}">تعديل</button>
+      <button class="btn btn-outline" data-addch="${w.id}">${ICON.upload} فصل</button>
+      <button class="btn btn-outline" style="color:var(--danger)" data-delwork="${w.id}">${ICON.trash}</button>
     </div>
   </div>`;
 }
@@ -727,65 +733,109 @@ function showModal(html){
 }
 function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
 
-function openNewWorkModal(){
+/* يقبل عمل موجود (existing) للتعديل، أو بدون أي شي لإنشاء عمل جديد */
+function openNewWorkModal(existing){
+  const isEdit = !!existing;
+  const w0 = existing || {};
   showModal(`
-    <h3>عمل جديد</h3>
-    <div class="field"><label>عنوان العمل</label><input type="text" id="nw_title" placeholder="مثال: ظل التاج المفقود"></div>
-    <div class="field"><label>العنوان بالإنجليزية (اختياري)</label><input type="text" id="nw_titleEn"></div>
+    <h3>${isEdit? 'تعديل العمل':'عمل جديد'}</h3>
+    <div class="field"><label>رابط الموقع المصدر (الصفحة التي أُخذ منها العمل)</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="nw_sourceUrl" placeholder="https://example.com/manga-name" dir="ltr" style="text-align:left;flex:1" value="${esc(w0.sourceUrl||'')}">
+        <button class="btn btn-outline" id="nw_fetchBtn" style="flex:none;padding:10px 12px">${ICON.link} جلب</button>
+      </div>
+      <div style="font-size:11px;color:var(--faint);margin-top:5px">يجيب فقط عنوان العمل وصورة الغلاف والوصف من هذي الصفحة تحديداً، وتراجعها قبل الحفظ — ما يسحب فصول ولا باقي أعمال الموقع.</div>
+    </div>
+    <div class="field"><label>عنوان العمل</label><input type="text" id="nw_title" placeholder="مثال: ظل التاج المفقود" value="${esc(w0.title||'')}"></div>
+    <div id="nw_titleWarn" style="display:none;color:var(--danger);font-size:11.5px;margin:-8px 0 10px">هذا يبدو رابط مو عنوان — انسخه لحقل "رابط الموقع المصدر" فوك واكتب عنوان العمل الحقيقي هنا.</div>
+    <div class="field"><label>العنوان بالإنجليزية (اختياري)</label><input type="text" id="nw_titleEn" value="${esc(w0.titleEn||'')}"></div>
     <div class="field"><label>النوع</label>
       <div class="radio-row">
-        <label><input type="radio" name="nw_type" value="مانجا" checked><span>مانجا</span></label>
-        <label><input type="radio" name="nw_type" value="مانهوا"><span>مانهوا</span></label>
-        <label><input type="radio" name="nw_type" value="مانها"><span>مانها</span></label>
+        <label><input type="radio" name="nw_type" value="مانجا" ${(!w0.type||w0.type==='مانجا')?'checked':''}><span>مانجا</span></label>
+        <label><input type="radio" name="nw_type" value="مانهوا" ${w0.type==='مانهوا'?'checked':''}><span>مانهوا</span></label>
+        <label><input type="radio" name="nw_type" value="مانها" ${w0.type==='مانها'?'checked':''}><span>مانها</span></label>
       </div>
     </div>
     <div class="field"><label>حالة العمل</label>
       <div class="radio-row">
-        <label><input type="radio" name="nw_status" value="مستمر" checked><span>مستمر</span></label>
-        <label><input type="radio" name="nw_status" value="مكتمل"><span>مكتمل</span></label>
-        <label><input type="radio" name="nw_status" value="متوقف"><span>متوقف</span></label>
+        <label><input type="radio" name="nw_status" value="مستمر" ${(!w0.status||w0.status==='مستمر')?'checked':''}><span>مستمر</span></label>
+        <label><input type="radio" name="nw_status" value="مكتمل" ${w0.status==='مكتمل'?'checked':''}><span>مكتمل</span></label>
+        <label><input type="radio" name="nw_status" value="متوقف" ${w0.status==='متوقف'?'checked':''}><span>متوقف</span></label>
       </div>
     </div>
-    <div class="field"><label>التصنيفات (افصل بينها بفاصلة)</label><input type="text" id="nw_genres" placeholder="أكشن، خيال، دراما"></div>
-    <div class="field"><label>رابط الموقع المصدر (الموقع الذي أُخذ منه العمل)</label><input type="text" id="nw_sourceUrl" placeholder="https://example.com/manga-name" dir="ltr" style="text-align:left"></div>
-    <div class="field"><label>تاريخ الفصل القادم (اختياري)</label><input type="date" id="nw_nextDate"></div>
-    <div class="field"><label>الوصف</label><textarea id="nw_desc" placeholder="نبذة عن القصة..."></textarea></div>
+    <div class="field"><label>التصنيفات (افصل بينها بفاصلة)</label><input type="text" id="nw_genres" placeholder="أكشن، خيال، دراما" value="${esc((w0.genres||[]).join('، '))}"></div>
+    <div class="field"><label>تاريخ الفصل القادم (اختياري)</label><input type="date" id="nw_nextDate" value="${esc(w0.nextReleaseDate||'')}"></div>
+    <div class="field"><label>الوصف</label><textarea id="nw_desc" placeholder="نبذة عن القصة...">${esc(w0.desc||'')}</textarea></div>
     <div class="field"><label>غلاف العمل</label>
-      <div class="filepick" id="nw_coverPick">${ICON.image}<div style="margin-top:6px">اضغط لاختيار صورة الغلاف</div></div>
+      <div class="filepick" id="nw_coverPick">${w0.cover? `<img src="${w0.cover}" style="max-height:90px;border-radius:6px">` : ICON.image+'<div style="margin-top:6px">اضغط لاختيار صورة الغلاف، أو استخدم زر "جلب" فوك</div>'}</div>
       <input type="file" id="nw_cover" accept="image/*" class="hidden">
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
-      <button class="btn btn-accent" id="nw_save">حفظ العمل</button>
+      <button class="btn btn-accent" id="nw_save">${isEdit?'حفظ التعديلات':'حفظ العمل'}</button>
     </div>
   `);
   const coverInput = document.getElementById('nw_cover');
   document.getElementById('nw_coverPick').onclick = ()=>coverInput.click();
-  let coverData=null;
+  let coverData = w0.cover || null;
   coverInput.onchange = async ()=>{
     if(coverInput.files[0]){
       coverData = await fileToDataURL(coverInput.files[0]);
       document.getElementById('nw_coverPick').innerHTML = `<img src="${coverData}" style="max-height:90px;border-radius:6px">`;
     }
   };
+
+  const titleInput = document.getElementById('nw_title');
+  const warnEl = document.getElementById('nw_titleWarn');
+  const looksLikeUrl = (s)=> /^https?:\/\//i.test(s.trim());
+  titleInput.oninput = ()=>{ warnEl.style.display = looksLikeUrl(titleInput.value) ? 'block':'none'; };
+
+  document.getElementById('nw_fetchBtn').onclick = async ()=>{
+    const url = document.getElementById('nw_sourceUrl').value.trim();
+    if(!url){ toast('حط رابط الصفحة أول'); return; }
+    const btn = document.getElementById('nw_fetchBtn');
+    const oldLabel = btn.innerHTML; btn.innerHTML = '...'; btn.disabled = true;
+    try{
+      const r = await fetch('/.netlify/functions/fetch-meta?url='+encodeURIComponent(url));
+      const data = await r.json();
+      if(data.error){ toast(data.error); }
+      else {
+        if(data.title && !titleInput.value.trim()) titleInput.value = data.title;
+        if(data.description && !document.getElementById('nw_desc').value.trim()) document.getElementById('nw_desc').value = data.description;
+        if(data.image){ coverData = data.image; document.getElementById('nw_coverPick').innerHTML = `<img src="${data.image}" style="max-height:90px;border-radius:6px">`; }
+        warnEl.style.display='none';
+        toast('تم جلب المعلومات — راجعها قبل الحفظ');
+      }
+    }catch(e){
+      toast('هذي الميزة تحتاج نشر التطبيق على Netlify (ما تشتغل وأنت تجرب محلياً بدون رفع)');
+    }
+    btn.innerHTML = oldLabel; btn.disabled = false;
+  };
+
   document.getElementById('nw_save').onclick = async ()=>{
-    const title = document.getElementById('nw_title').value.trim();
+    const title = titleInput.value.trim();
     if(!title){ toast('الرجاء إدخال عنوان العمل'); return; }
+    if(looksLikeUrl(title)){ toast('عنوان العمل ما يصير يكون رابط — صححه أول'); return; }
     const type = document.querySelector('[name=nw_type]:checked').value;
     const status = document.querySelector('[name=nw_status]:checked').value;
     const genres = document.getElementById('nw_genres').value.split('،').join(',').split(',').map(s=>s.trim()).filter(Boolean);
-    const w = {
-      id: uid(), title, titleEn: document.getElementById('nw_titleEn').value.trim(),
+    const w = Object.assign({}, w0, {
+      id: w0.id || uid(), title, titleEn: document.getElementById('nw_titleEn').value.trim(),
       type, status, genres, desc: document.getElementById('nw_desc').value.trim(),
       sourceUrl: document.getElementById('nw_sourceUrl').value.trim(),
       nextReleaseDate: document.getElementById('nw_nextDate').value,
-      cover: coverData, source: type==='مانهوا'?'ويب تون':'مانجا ويب', publisher:'رفع شخصي',
-      from: new Date().getFullYear().toString(), chapters:0, avgRating:(7+Math.random()*2), dist:null,
-      createdAt: Date.now(), updatedAt: Date.now()
-    };
-    w.dist = seededDist(w.id);
+      cover: coverData,
+      source: w0.source || (type==='مانهوا'?'ويب تون':'مانجا ويب'),
+      publisher: w0.publisher || 'رفع شخصي',
+      from: w0.from || new Date().getFullYear().toString(),
+      chapters: w0.chapters||0,
+      avgRating: w0.avgRating || (7+Math.random()*2),
+      dist: w0.dist || null,
+      createdAt: w0.createdAt || Date.now(), updatedAt: Date.now()
+    });
+    if(!w.dist) w.dist = seededDist(w.id);
     await Store.putWork(w);
-    closeModal(); toast('تمت إضافة العمل بنجاح'); pageUpload();
+    closeModal(); toast(isEdit? 'تم حفظ التعديلات':'تمت إضافة العمل بنجاح'); pageUpload();
   };
 }
 
@@ -854,11 +904,16 @@ function openBulkAddModal(){
     const type = document.querySelector('[name=bk_type]:checked').value;
     const lines = document.getElementById('bk_text').value.split('\n').map(l=>l.trim()).filter(Boolean);
     if(!lines.length){ toast('أضف سطر واحد على الأقل'); return; }
-    let count=0;
+    let count=0, skipped=0;
     for(const line of lines){
       const parts = line.split('|').map(s=>s.trim());
-      const title = parts[0]; const sourceUrl = parts[1]||'';
+      let title = parts[0]; let sourceUrl = parts[1]||'';
       if(!title) continue;
+      // إذا كتب رابط بس بدون عنوان، نحط الرابط بخانة المصدر مو بالعنوان
+      if(/^https?:\/\//i.test(title)){
+        if(!sourceUrl) sourceUrl = title;
+        skipped++; continue; // نتجاوزه بدل ما نحفظ عنوان مكسور — يحتاج عنوان حقيقي
+      }
       const w = {
         id: uid(), title, titleEn:'', type, status:'مستمر', genres:[], desc:'',
         sourceUrl, nextReleaseDate:'', cover:null, source: type==='مانهوا'?'ويب تون':'مانجا ويب',
@@ -869,9 +924,12 @@ function openBulkAddModal(){
       await Store.putWork(w);
       count++;
     }
-    closeModal(); toast(`تمت إضافة ${count} عمل`); pageUpload();
+    closeModal();
+    toast(skipped? `تمت إضافة ${count} عمل — تجاوزت ${skipped} سطر بلا عنوان واضح`:`تمت إضافة ${count} عمل`);
+    pageUpload();
   };
 }
+
 
 /* ---------- إظهار المحتوى ---------- */
 function setView(html){ document.getElementById('app').innerHTML = html; renderDrawer(); }
