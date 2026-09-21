@@ -25,7 +25,7 @@ exports.handler = async function (event) {
 
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PureMangaPreview/1.0)' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36' },
       redirect: 'follow',
     });
     if (!res.ok) {
@@ -37,7 +37,7 @@ exports.handler = async function (event) {
     if (reader) {
       let received = 0;
       const decoder = new TextDecoder('utf-8');
-      while (received < 250000) {
+      while (received < 350000) {
         const { done, value } = await reader.read();
         if (done) break;
         html += decoder.decode(value, { stream: true });
@@ -48,27 +48,43 @@ exports.handler = async function (event) {
     }
 
     const pick = (re) => { const m = html.match(re); return m ? m[1].trim() : ''; };
-    const title =
+    
+    // 1. محاولة جلب العنوان (Meta Tags ثم عناصر الهيكل للمواقع مثل Olympus, Azora, MangaLik)
+    let title =
       pick(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) ||
       pick(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i) ||
+      pick(/<h1[^>]*class=["'][^"']*(?:entry-title|post-title)[^"']*["'][^>]*>([\s\S]*?)<\/h1>/i) ||
       pick(/<title[^>]*>([^<]+)<\/title>/i);
-    const image =
+
+    // 2. محاولة جلب صورة الغلاف (Meta Tags ثم صوّر الغلاف من الكلاسات المشهورة)
+    let image =
       pick(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
-      pick(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-    const description =
+      pick(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
+      pick(/<div[^>]*class=["'][^"']*(?:thumb|summary_image)[^"']*["'][^>]*>[\s\S]*?<img[^>]+(?:data-src|src)=["']([^"']+)["']/i);
+
+    // 3. محاولة جلب الوصف (Meta Tags ثم أقسام الوصف والقصة)
+    let description =
       pick(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i) ||
-      pick(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
+      pick(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i) ||
+      pick(/<div[^>]*class=["'][^"']*(?:entry-content|manga-excerpt|synopsis)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+
+    // تنظيف النصوص من أي وسم HTML زايد
+    const stripTags = (s) => (s || '').replace(/<[^>]*>/g, '').trim();
 
     const decodeEntities = (s) => (s || '')
       .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-      .replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/\s+/g, ' ');
+
+    title = stripTags(decodeEntities(title)).replace(/ - (Azora|Olympus|MangaLik).*$/i, '');
+    description = stripTags(decodeEntities(description));
 
     return {
       statusCode: 200, headers: cors,
       body: JSON.stringify({
-        title: decodeEntities(title).slice(0, 200),
+        title: title.slice(0, 200),
         image: image || '',
-        description: decodeEntities(description).slice(0, 600),
+        description: description.slice(0, 600),
       }),
     };
   } catch (e) {
